@@ -1,155 +1,7 @@
 import * as websim from 'websim';
 
 const imageContainer = document.getElementById('image-container');
-const loginButton = document.getElementById('login-button'); // Although not used yet, it's good practice to grab it.
-const originalImageUrl = '/a/18474e7e-55ef-4c97-90f7-2b9ee0bbbfab'; // The provided asset URL
-
-let generatedImages = [];
-let currentImageIndex = 0;
-const maxImages = 5;
-const intervalTime = 7000; // 7 seconds
-let imageGenerationInterval;
-let imageCycleInterval;
-let initialDescription = '';
-
-async function analyzeAndGenerateInitialImage() {
-    imageContainer.textContent = 'Analyzing image...'; // Placeholder text
-
-    try {
-        const completion = await websim.chat.completions.create({
-            messages: [
-                 {
-                    role: "user",
-                    content: [
-                        {
-                          type: "text",
-                          text: `Describe the key elements and atmosphere of this image in detail, focusing on aspects suitable for generating similar fantasy-themed images. Respond with only the description, no extra text.`,
-                        },
-                        {
-                          type: "image_url",
-                          image_url: { url: originalImageUrl },
-                        },
-                     ],
-                 },
-            ],
-        });
-
-        initialDescription = completion.content;
-        console.log("Initial Description:", initialDescription);
-        imageContainer.textContent = 'Generating image...'; // Update status
-
-        await generateAndDisplayImage(); // Generate the first image immediately
-
-        // Start the interval to generate the next images
-        imageGenerationInterval = setInterval(generateAndDisplayImage, intervalTime);
-
-    } catch (error) {
-        console.error("Error during initial analysis or generation:", error);
-        imageContainer.textContent = 'Error generating image. Please try again.';
-        imageContainer.style.backgroundImage = `url(${originalImageUrl})`; // Fallback to original
-    }
-}
-
-async function generateAndDisplayImage() {
-    if (generatedImages.length >= maxImages) {
-        clearInterval(imageGenerationInterval); // Stop generating new images
-        console.log("Maximum images generated. Starting cycle.");
-        startImageCycle();
-        return; // Exit function
-    }
-
-    imageContainer.textContent = `Generating image ${generatedImages.length + 1}/${maxImages}...`;
-
-    try {
-        // Add variation to the prompt for each generation
-        const prompt = `${initialDescription}. Fantasy art style, detailed, atmosphere. Variation ${generatedImages.length + 1}.`;
-        console.log("Generating image with prompt:", prompt);
-
-        const result = await websim.imageGen({
-            prompt: prompt,
-            width: 640,
-            height: 480,
-        });
-
-        const newImageUrl = result.url;
-        console.log("Generated image URL:", newImageUrl);
-
-        generatedImages.push(newImageUrl);
-        imageContainer.style.backgroundImage = `url(${newImageUrl})`;
-        imageContainer.textContent = ''; // Clear loading text
-        currentImageIndex = generatedImages.length - 1; // Point to the newly added image
-
-
-    } catch (error) {
-        console.error("Error generating image:", error);
-        imageContainer.textContent = 'Error generating image.';
-        // Optionally stop trying after an error, or just log and continue
-        // clearInterval(imageGenerationInterval); // Uncomment to stop on error
-    }
-}
-
-
-function startImageCycle() {
-    // Ensure we have images to cycle through
-    if (generatedImages.length === 0) {
-        console.error("No generated images to cycle.");
-        imageContainer.textContent = 'Failed to load images for cycling.';
-         imageContainer.style.backgroundImage = `url(${originalImageUrl})`; // Fallback
-        return;
-    }
-
-    // Clear any existing generation interval if it somehow wasn't cleared
-    clearInterval(imageGenerationInterval);
-
-     // Display the first generated image immediately before starting the cycle interval
-    currentImageIndex = 0;
-    imageContainer.style.backgroundImage = `url(${generatedImages[currentImageIndex]})`;
-    imageContainer.textContent = ''; // Clear any status text
-
-
-    // Start cycling through the generated images
-    imageCycleInterval = setInterval(() => {
-        currentImageIndex = (currentImageIndex + 1) % generatedImages.length;
-        imageContainer.style.backgroundImage = `url(${generatedImages[currentImageIndex]})`;
-    }, intervalTime);
-}
-
-
-// Start the process
-analyzeAndGenerateInitialImage();
-`````` index.html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meridian 59 Inspired Login</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="container">
-        <div id="image-container">
-            <!-- Image will be loaded here -->
-            Loading...
-        </div>
-        <button id="login-button">Click here to log on!</button>
-    </div>
-
-    <script type="importmap">
-    {
-      "imports": {
-        "websim": "/websim.js"
-      }
-    }
-    </script>
-    <script type="module" src="script.js"></script>
-</body>
-</html>
-
-import * as websim from 'websim';
-
-const imageContainer = document.getElementById('image-container');
-const loginButton = document.getElementById('login-button'); // Although not used yet, it's good practice to grab it.
+const loginButton = document.getElementById('login-button');
 const originalImageUrl = '/a/18474e7e-55ef-4c97-90f7-2b9ee0bbbfab'; // The provided asset URL
 
 let generatedImages = [];
@@ -163,9 +15,10 @@ let isGenerating = false; // Flag to prevent concurrent generation
 
 async function analyzeAndGenerateInitialImage() {
     imageContainer.textContent = 'Analyzing reference image...';
+    console.log("Starting analysis...");
 
     try {
-        console.log("Analyzing image:", originalImageUrl);
+        console.log("Analyzing image URL:", originalImageUrl);
         const completion = await websim.chat.completions.create({
              messages: [
                  {
@@ -173,7 +26,8 @@ async function analyzeAndGenerateInitialImage() {
                     content: [
                         {
                           type: "text",
-                          text: `Describe this image in detail for an AI image generator. Focus on the key visual elements, the fantasy setting, the atmosphere, and the art style (early 3D render look). Output only the description. Example: "An owl perched in a cluttered alchemist's workshop with potions, scrolls, and a view of a distant castle."`,
+                          // Refined prompt based on the specific image:
+                          text: `Describe this image precisely for an AI image generator. It depicts an alchemist's or wizard's workshop from an early 3D game (like Meridian 59). Key elements: A prominent, large grey owl with bright orange eyes perched on metallic apparatus on the right. Wooden shelves filled with colorful potions, skulls, and scrolls in the background. A heavy wooden table in the foreground holds a large glass flask containing a bubbling, glowing purple potion. An open archway or window reveals a view of a distant, dark fantasy castle on a green hill under a daytime sky. The overall style is a low-poly, textured early 3D render with somewhat dim, atmospheric lighting. Focus on capturing this specific scene, style, and moody atmosphere. Output only the description, no conversational text.`,
                         },
                         {
                           type: "image_url",
@@ -185,10 +39,10 @@ async function analyzeAndGenerateInitialImage() {
         });
 
         initialDescription = completion.content.trim();
-        if (!initialDescription) {
-            throw new Error("Received empty description from analysis.");
+        if (!initialDescription || initialDescription.length < 20) { // Basic check for a meaningful description
+            throw new Error("Received an inadequate description from analysis.");
         }
-        console.log("Initial Description:", initialDescription);
+        console.log("Initial Description Received:", initialDescription);
 
         // Generate the first image immediately
         await generateAndDisplayImage();
@@ -200,59 +54,75 @@ async function analyzeAndGenerateInitialImage() {
              if (imageCycleInterval) clearInterval(imageCycleInterval);
 
             imageGenerationInterval = setInterval(generateAndDisplayImage, intervalTime);
-            console.log(`Started generation interval (ID: ${imageGenerationInterval})`);
+            console.log(`Started generation interval (ID: ${imageGenerationInterval}) to generate remaining images.`);
         } else if (generatedImages.length === maxImages) {
-            // If somehow maxImages is 1, start cycling immediately
+             // If maxImages is 1, start cycling immediately
+            console.log("Max images (1) reached, starting cycle immediately.");
             startImageCycle();
+        } else if (generatedImages.length === 0) {
+            // This case means the first generation failed within generateAndDisplayImage
+            console.error("First image generation failed. Displaying original image.");
+            imageContainer.textContent = 'Error generating initial image. Displaying fallback.';
+            imageContainer.style.backgroundImage = `url(${originalImageUrl})`;
         }
 
     } catch (error) {
-        console.error("Error during initial analysis or first generation:", error);
-        imageContainer.textContent = `Error: ${error.message}. Displaying original image.`;
+        console.error("Error during initial analysis or first generation attempt:", error);
+        // Display fallback content
+        imageContainer.textContent = `Analysis/Generation Error: ${error.message}. Displaying original image.`;
         imageContainer.style.backgroundImage = `url(${originalImageUrl})`;
-         // Stop any further attempts if analysis failed
+         // Stop any further attempts if analysis/initial gen failed
         if (imageGenerationInterval) clearInterval(imageGenerationInterval);
         if (imageCycleInterval) clearInterval(imageCycleInterval);
+        imageGenerationInterval = null;
+        imageCycleInterval = null;
     }
 }
 
 async function generateAndDisplayImage() {
     // Prevent concurrent generation requests
     if (isGenerating) {
-        console.log("Generation already in progress, skipping interval trigger.");
+        console.log("Generation already in progress, skipping.");
         return;
     }
 
     // Check if we've reached the max count *before* attempting generation
      if (generatedImages.length >= maxImages) {
-        console.log("Max images reached. Clearing generation interval and starting cycle.");
+        console.log(`Max images (${maxImages}) reached. Generation complete.`);
         if (imageGenerationInterval) {
              clearInterval(imageGenerationInterval);
              imageGenerationInterval = null;
              console.log("Cleared generation interval.");
         }
-        startImageCycle();
+        // Only start cycling if it's not already running
+        if (!imageCycleInterval) {
+            startImageCycle();
+        }
         return; // Stop generation attempts
     }
 
     isGenerating = true;
-    imageContainer.textContent = `Generating image ${generatedImages.length + 1}/${maxImages}...`;
-    console.log(`Attempting to generate image ${generatedImages.length + 1}`);
+    const imageNum = generatedImages.length + 1;
+    imageContainer.textContent = `Generating image ${imageNum}/${maxImages}...`;
+    console.log(`Attempting to generate image ${imageNum}`);
 
     try {
-        // Add variation to the prompt for each generation
-        const prompt = `${initialDescription}. Variation seed ${Date.now()}.`; // Using timestamp for simple variation
+        // Use a different seed for each generation for variation
+        const prompt = `${initialDescription} Seed: ${Date.now()}`;
         console.log("Generating image with prompt:", prompt);
 
         const result = await websim.imageGen({
             prompt: prompt,
             width: 640,
             height: 480,
-            // seed: generatedImages.length // Using index as seed might work too
         });
 
+        if (!result || !result.url) {
+            throw new Error("Image generation result is invalid or missing URL.");
+        }
+
         const newImageUrl = result.url;
-        console.log(`Generated image ${generatedImages.length + 1} URL:`, newImageUrl);
+        console.log(`Generated image ${imageNum} URL:`, newImageUrl);
 
         // Preload the image before adding it to the array and changing background
         await preloadImage(newImageUrl);
@@ -261,54 +131,65 @@ async function generateAndDisplayImage() {
         imageContainer.style.backgroundImage = `url(${newImageUrl})`;
         imageContainer.textContent = ''; // Clear loading text
         currentImageIndex = generatedImages.length - 1; // Point to the newly added image
+        console.log(`Successfully generated and displayed image ${imageNum}. Total: ${generatedImages.length}`);
+
 
         // Check *after* successful generation if we've reached the limit
         if (generatedImages.length >= maxImages) {
-             console.log("Max images reached after generation. Clearing interval and starting cycle.");
+             console.log(`Max images (${maxImages}) reached after generation. Clearing interval and starting cycle.`);
             if (imageGenerationInterval) {
                 clearInterval(imageGenerationInterval);
                 imageGenerationInterval = null;
                  console.log("Cleared generation interval.");
             }
-            startImageCycle();
+            // Only start cycling if it's not already running
+             if (!imageCycleInterval) {
+                startImageCycle();
+            }
         }
 
     } catch (error) {
-        console.error(`Error generating image ${generatedImages.length + 1}:`, error);
-        imageContainer.textContent = `Error generating image ${generatedImages.length + 1}. Trying again later...`;
-        // Don't stop the interval on error, allow it to try again next time.
-        // However, if too many errors occur, we might want to stop. (Not implemented here)
+        console.error(`Error generating image ${imageNum}:`, error);
+        imageContainer.textContent = `Error generating image ${imageNum}. Will retry or cycle if max reached.`;
+        // Don't stop the interval on error, allow it to try again next time unless max images are reached somehow
+         if (generatedImages.length >= maxImages) {
+             if (imageGenerationInterval) {
+                clearInterval(imageGenerationInterval);
+                imageGenerationInterval = null;
+             }
+             if (!imageCycleInterval) startImageCycle(); // Start cycling even if last attempt failed but we have enough images
+         }
     } finally {
          isGenerating = false; // Allow next generation attempt
+         console.log("Generation flag set to false.");
     }
 }
 
 function startImageCycle() {
-    // Ensure this only runs once and generation has stopped
-    if (imageCycleInterval || imageGenerationInterval) {
-         if(imageGenerationInterval) {
-             clearInterval(imageGenerationInterval);
-             imageGenerationInterval = null;
-             console.log("Cleared generation interval before starting cycle.");
-         }
-         // If cycle interval already exists, don't start another one
-         if(imageCycleInterval) {
-            console.log("Cycle interval already running.");
-            return;
-         }
+    console.log("Attempting to start image cycle...");
+    // Ensure generation has fully stopped
+    if (imageGenerationInterval) {
+         clearInterval(imageGenerationInterval);
+         imageGenerationInterval = null;
+         console.log("Cleared lingering generation interval before starting cycle.");
     }
+     // Prevent multiple cycle intervals
+     if (imageCycleInterval) {
+        console.log("Cycle interval already running. Exiting startImageCycle.");
+        return;
+     }
 
     // Ensure we have images to cycle through
     if (generatedImages.length === 0) {
-        console.error("No generated images to cycle.");
-        imageContainer.textContent = 'Failed to load images for cycling.';
+        console.error("No generated images available to start cycling.");
+        imageContainer.textContent = 'Failed to load any images for cycling. Displaying fallback.';
         imageContainer.style.backgroundImage = `url(${originalImageUrl})`; // Fallback
         return;
     }
 
-    console.log("Starting image cycling.");
+    console.log(`Starting image cycling with ${generatedImages.length} images.`);
 
-     // Display the first generated image immediately before starting the cycle interval
+    // Display the first generated image immediately before starting the cycle interval
     currentImageIndex = 0;
     imageContainer.style.backgroundImage = `url(${generatedImages[currentImageIndex]})`;
     imageContainer.textContent = ''; // Clear any status text
@@ -327,12 +208,16 @@ function preloadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-            console.log("Preloaded:", url);
+            console.log("Successfully preloaded:", url);
             resolve();
         };
         img.onerror = (e) => {
+            // Don't necessarily reject the whole process, but log the error
             console.error("Failed to preload:", url, e);
-            reject(new Error(`Failed to load image ${url}`));
+            // Resolve anyway, maybe the browser can still load it later? Or reject if critical.
+            // For this case, let's resolve but log it clearly. The background might just fail to update later.
+            resolve();
+            // reject(new Error(`Failed to load image ${url}`)); // Stricter alternative
         };
         img.src = url;
     });
@@ -340,8 +225,5 @@ function preloadImage(url) {
 
 
 // --- Initialization ---
-// Add a small delay before starting to ensure websim is ready (optional, but can help)
-// setTimeout(analyzeAndGenerateInitialImage, 100);
-analyzeAndGenerateInitialImage(); // Start the process immediately
-
-
+// Start the process
+analyzeAndGenerateInitialImage();
