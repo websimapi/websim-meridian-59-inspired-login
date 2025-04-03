@@ -12,9 +12,11 @@ let imageCycleInterval = null;
 let isGenerating = false;
 
 // Description based on the provided reference image
-const imageDescription = `An alchemist's or wizard's workshop from a classic fantasy game. Features a large grey owl with bright orange eyes perched on a stand, wooden shelves filled with colorful potions and scrolls, a wooden table with a large glass flask containing a glowing purple potion, and an open window revealing a distant castle on a green hill. The style is reminiscent of early 3D fantasy games with atmospheric lighting.`;
+const imageDescription = "A Meridian 59 inspired alchemist's workshop with a large grey owl perched on a stand. The room features wooden shelves with colorful potion bottles, scrolls, and magical items. There's a wooden table with a large purple glowing potion in a flask. Through an open window, a castle can be seen on a green hill in the distance. The room has medieval fantasy game aesthetics with warm lighting.";
 
 async function initialize() {
+    // Set initial background to the original image while generating new ones
+    imageContainer.style.backgroundImage = `url(${originalImageUrl})`;
     imageContainer.textContent = 'Starting generation...';
     
     try {
@@ -33,7 +35,7 @@ async function initialize() {
         
     } catch (error) {
         console.error("Error during initialization:", error);
-        imageContainer.textContent = 'Error generating images. Displaying original.';
+        imageContainer.textContent = '';
         imageContainer.style.backgroundImage = `url(${originalImageUrl})`;
     }
 }
@@ -43,33 +45,46 @@ async function generateAndDisplayImage() {
     
     isGenerating = true;
     const imageNum = generatedImages.length + 1;
-    imageContainer.textContent = `Generating image ${imageNum}/${maxImages}...`;
+    const statusText = document.createElement('div');
+    statusText.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    statusText.style.padding = '10px';
+    statusText.style.borderRadius = '5px';
+    statusText.textContent = `Generating image ${imageNum}/${maxImages}...`;
+    
+    // Clear container and add status text
+    imageContainer.textContent = '';
+    imageContainer.appendChild(statusText);
     
     try {
         const seed = Math.floor(Math.random() * 10000);
+        console.log(`Generating image ${imageNum} with seed ${seed}...`);
+        
         const result = await websim.imageGen({
-            prompt: `${imageDescription} Variation ${imageNum}. Seed: ${seed}`,
+            prompt: `${imageDescription} Style of a classic fantasy RPG game from the 90s. Variation ${imageNum}. Seed: ${seed}`,
             width: 640,
             height: 480,
         });
+        
+        console.log("Image generation result:", result);
         
         if (result && result.url) {
             generatedImages.push(result.url);
             imageContainer.style.backgroundImage = `url(${result.url})`;
             imageContainer.textContent = '';
-            console.log(`Generated image ${imageNum}`);
+            console.log(`Generated image ${imageNum} successfully:`, result.url);
         } else {
-            throw new Error("Failed to generate image");
+            throw new Error(`Failed to generate image ${imageNum}: No URL returned`);
         }
     } catch (error) {
         console.error(`Error generating image ${imageNum}:`, error);
-        // If first image fails, show original
+        // If first image fails, make sure original is showing
         if (generatedImages.length === 0) {
             imageContainer.style.backgroundImage = `url(${originalImageUrl})`;
-            imageContainer.textContent = '';
         }
     } finally {
         isGenerating = false;
+        // Remove status text
+        imageContainer.textContent = '';
     }
 }
 
@@ -81,11 +96,20 @@ function startImageCycle() {
     
     console.log("Starting image cycle with", generatedImages.length, "images");
     
+    // Display first image immediately
+    currentImageIndex = 0;
+    imageContainer.style.backgroundImage = `url(${generatedImages[currentImageIndex]})`;
+    
     imageCycleInterval = setInterval(() => {
         currentImageIndex = (currentImageIndex + 1) % generatedImages.length;
+        console.log(`Cycling to image ${currentImageIndex + 1}`);
         imageContainer.style.backgroundImage = `url(${generatedImages[currentImageIndex]})`;
     }, intervalTime);
 }
 
-// Start the process
-initialize();
+// Add loading event listener
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded, initializing...");
+    // Start the process
+    initialize();
+});
